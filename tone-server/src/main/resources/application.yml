@@ -1,0 +1,203 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  # 大文件上传按需放开
+  tomcat:
+    max-swallow-size: 100MB
+
+spring:
+  application:
+    name: tone-server
+  profiles:
+    active: dev
+  # multipart 上传限制
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss
+  mvc:
+    throw-exception-if-no-handler-found: true
+  # 关闭 Spring AI 全部模型自动装配：ChatModel 由业务层按 tone.llm.mock 自行装配
+  # （MockChatModel 或手动构建的 OpenAiChatModel），避免无 Key 时启动失败
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
+
+# ============ 脚手架自定义配置 ============
+tone:
+  # 安全 / JWT
+  security:
+    # 生产环境务必通过环境变量 TONE_SECURITY_JWT_SECRET 覆盖，不要使用默认值
+    jwt-secret: ${TONE_SECURITY_JWT_SECRET:toneAgentDefaultJwtSecretKeyPleaseChangeInProductionEnv1234567890}
+    # accessToken 有效期（分钟）
+    access-expire: 30
+    # refreshToken 有效期（天）
+    refresh-expire: 7
+    # refreshToken 轮换后的宽限期（秒）：并发刷新时旧 token 仍可用，避免同一时刻多个请求同时 401
+    refresh-grace: 30
+    # 放行路径（Ant 风格），无需登录即可访问。
+    # 注意：这里只放行「确实拿不到 token」的端点；/auth/logout、/auth/info、/auth/change-password
+    # 都需要从 token 里取当前用户，绝不能一起放行，否则登出会变成空操作。
+    white-list:
+      - /auth/login
+      - /auth/refresh
+      # 小程序端接口：走独立的微信 JWT 鉴权（WxAuthInterceptor），不进管理台 RBAC
+      - /api/**
+      # 原图签名链接：靠 HMAC 签名 + 有效期鉴权，不依赖登录态。
+      # 不放行的话 <img src> 发不出 Authorization 头，"查看原图"就打不开
+      - /system/file/origin/**
+      - /captcha/**
+      - /doc.html
+      - /swagger-ui/**
+      - /swagger-ui.html
+      - /v3/api-docs/**
+      - /webjars/**
+      - /favicon.ico
+      - /error
+    # 图形验证码开关（本地联调可关掉，生产建议开启）
+    captcha-enabled: true
+    # 连续登录失败 N 次后锁定账号
+    max-login-fail: 5
+    # 锁定时长（分钟）
+    lock-minutes: 15
+  # 新建用户的默认密码
+  user:
+    default-password: 123456
+  # 文件存储
+  file:
+    # 存储类型：local（默认） / minio / oss
+    # 切 minio / oss 前请确认 pom 里对应的 SDK 依赖已引入，否则启动会报“未找到存储实现”
+    storage-type: local
+    # public 区：存放压缩后的展示图与普通文件，可被静态映射 / Nginx / CDN 直接托管
+    local-path: ./upload
+    # 允许上传的扩展名，空表示不限制
+    allow-extensions: jpg,jpeg,png,gif,bmp,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar,mp4
+    max-size: 50MB
+    # 访问前缀。本地模式即静态映射前缀；MinIO/OSS 模式填 bucket 公网域名
+    url-prefix: /upload
+    # 原图签名链接有效期（秒）
+    origin-url-expire: 1800
+    # 原件区：与 public 区完全隔离，不对外暴露路径
+    origin:
+      local-path: ./upload-origin
+      key-prefix: origin
+    # 图片压缩：页面默认用压缩图，点「查看原图」才走签名链接取原件
+    compress:
+      enabled: true
+      # 小于该体积（KB）的原图跳过压缩
+      min-size-kb: 20
+      max-width: 1920
+      max-height: 1920
+      quality: 0.82
+      format: jpg
+      # GIF 可能带动画，压缩只会留第一帧；svg/ico 也不参与
+      skip-extensions: gif,svg,ico
+    # MinIO（storage-type=minio 时生效）
+    minio:
+      endpoint: ${TONE_FILE_MINIO_ENDPOINT:}
+      access-key: ${TONE_FILE_MINIO_ACCESS_KEY:}
+      secret-key: ${TONE_FILE_MINIO_SECRET_KEY:}
+      bucket: tone
+    # 阿里云 OSS（storage-type=oss 时生效）
+    oss:
+      endpoint: ${TONE_FILE_OSS_ENDPOINT:}
+      access-key-id: ${TONE_FILE_OSS_ACCESS_KEY_ID:}
+      access-key-secret: ${TONE_FILE_OSS_ACCESS_KEY_SECRET:}
+      bucket-name: tone
+  # 日志保留月数，超出后由定时任务清理
+  log:
+    retention-months: 6
+    clean-batch-size: 5000
+
+  # ============ 语气 Agent ============
+  agent:
+    # ReAct 循环最大轮数
+    max-rounds: 8
+    # 单次提交文本最大长度（字符）
+    max-text-length: 2000
+    # 每日免费检查次数（基于 openId + 日期）
+    daily-free-count: 3
+    # 每日通过看广告最多可获得的额外次数
+    daily-reward-max: 10
+
+  # ============ LLM（OpenAI 兼容协议） ============
+  llm:
+    # true=MockChatModel（无需 Key，返回模拟结果，用于开发联调）；false=真实调用
+    mock: true
+    # provider 仅决定 base-url/model 的默认预设：zhipu / dashscope / custom
+    provider: zhipu
+    base-url: https://open.bigmodel.cn/api/paas/v4
+    api-key: ${TONE_LLM_API_KEY:}
+    model: glm-4-flash
+    temperature: 0.7
+    # 真实调用超时（毫秒）
+    connect-timeout: 5000
+    read-timeout: 60000
+    # 备用模型降级：主模型失败（超时/限流/5xx）自动换备用重试一次（FallbackChatModel）。
+    # 为空 = 不启用。百炼专属端点只服务专属模型时，给 base-url 配公共服务端点即可，例如：
+    #   fallback:
+    #     model: qwen-flash
+    #     base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    fallback:
+      model: ${TONE_LLM_FALLBACK_MODEL:}
+      base-url: ${TONE_LLM_FALLBACK_BASE_URL:}
+
+  # ============ 微信小程序 ============
+  wx:
+    # 小程序 appid/secret（微信公众平台获取）。是否模拟登录由 mock-login 显式控制，与 appid 是否为空解耦：
+    # 开发期也可能配了 appid（测真实登录链路），凭据状态不应当行为开关
+#    appid: ${TONE_WX_APPID:}
+#    secret: ${TONE_WX_SECRET:}
+    # 小程序端独立 JWT 签名密钥（与管理台 jwt-secret 分开）
+    token-secret: ${TONE_WX_TOKEN_SECRET:toneWxDefaultTokenSecretPleaseChangeInProduction1234567890}
+    # 小程序 token 有效期（天）
+    token-expire-days: 30
+    # code2session 接口地址
+    code2session-url: https://api.weixin.qq.com/sns/jscode2session
+    appid: wx8ab08a1e1b424e4b
+    secret: 90cf9a9ed49f8d0d8074e63959fc356e
+
+  # ============ 激励视频广告 ============
+  ad:
+    # 微信激励视频广告位 ID（流量主后台申请）；为空时小程序隐藏广告入口，reward 接口按 dev 模式直接发放
+    unit-id: ${TONE_AD_UNIT_ID:}
+
+# ============ MyBatis-Plus ============
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    # 打印 SQL 由各环境 profile 决定，此处不开启
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+  global-config:
+    db-config:
+      id-type: auto
+      # 逻辑删除不在全局配置里声明：BaseEntity.delFlag 上已经用了 @TableLogic，
+      # 两边都配一遍的话，MP 会把 del_flag 条件拼两次，导致 "No value specified for parameter" 报错
+  mapper-locations: classpath*:/mapper/**/*.xml
+
+# ============ 接口文档 ============
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    # 按 tag 排序，接口多的情况下更好找
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+# ============ 日志 ============
+logging:
+  level:
+    root: info
+    com.lizp.tone: debug
