@@ -1,0 +1,61 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/tone_agent?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: root
+    password: '123456'
+    hikari:
+      pool-name: ToneHikariPool
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 600000
+      connection-timeout: 30000
+      max-lifetime: 1800000
+  data:
+    redis:
+      host: 192.168.0.200
+      port: 6379
+      # 生产环境必须设置密码
+      password:
+      database: 0
+      timeout: 5s
+      lettuce:
+        pool:
+          enabled: true
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+mybatis-plus:
+  configuration:
+    # 开发环境打印 SQL，方便排查
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+tone:
+  security:
+    # 本地联调先关掉验证码，省去每次输入；想验证验证码流程改成 true 即可
+    captcha-enabled: false
+  # 开发辅助工具开关：开启后 DevQuotaController（POST /api/quota/reset 一键重置今日配额）才会装配。
+  # prod/test 配置里没有这个键（默认 false），生产环境该接口 404，不用担心泄露
+  dev-tools-enabled: true
+  file:
+    local-path: ./upload
+  wx:
+    # 开发期默认模拟登录：忽略 appid/secret，按设备号生成稳定 mock openId（配了真实 appid 也不受影响）。
+    # 要在开发者工具里测真实 code2session 时改成 false，并确保 appid/secret 已配置
+    mock-login: true
+  llm:
+    mock: false
+    base-url: https://llm-n9bpwhfswrmjfc4k.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+    api-key: ${TONE_LLM_API_KEY:}
+    provider: "dashscope"
+    model: qwen3.8-max
+
+logging:
+  level:
+    com.lizp.tone: debug
+    # Lettuce 6.5 默认开启 TCP keepalive 并尝试设置 KEEPCOUNT/KEEPIDLE/KEEPINTERVAL 三个扩展选项，
+    # Windows 的 JDK NIO 不支持它们 → 每个新建 Redis 连接打三条 WARN "Unknown channel option"。
+    # 功能无影响（基础 SO_KEEPALIVE 仍生效，仅扩展微调被跳过），开发机（Windows）压掉即可；
+    # prod 跑在 Linux 上原生支持，本就不会出现这条告警
+    io.netty.bootstrap.Bootstrap: error

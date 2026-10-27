@@ -1,0 +1,155 @@
+// 全局样式：只放重置 + 少量通用类，组件样式一律写在组件内（scoped）
+:root {
+  --base-sidebar-width: 210px;
+  --base-sidebar-collapsed-width: 64px;
+  --base-navbar-height: 56px;
+  /* 页签栏：= 页签项 28 + 上下各 6 的内边距，改这个值要同步改 Tabs.vue 里的 padding */
+  --base-tabs-height: 40px;
+  /* 主色上的前景色，由 theme.ts 按亮度算出来；这里只是未应用主题前的兜底 */
+  --base-primary-contrast: #fff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
+    sans-serif;
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+  background-color: var(--el-bg-color-page);
+}
+
+a {
+  color: var(--el-color-primary);
+  text-decoration: none;
+}
+
+/* 表格上方搜索区与操作栏的通用间距 */
+.base-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.base-toolbar__spacer {
+  flex: 1;
+}
+
+/*
+ * 内容区卡片：内容区本身是灰底(--el-bg-color-page)，业务页统一垫一张白卡，
+ * 让"页面"和"背景"分开。放在全局而不是 12 个页面各写一遍 .page：
+ * 各页面 scoped 里的 .page__pagination 权重更高，会继续生效，不冲突。
+ */
+.page {
+  padding: 12px;
+  background-color: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+}
+
+/*
+ * 例外：页面内部自己已经是卡片布局（如字典页左右双卡），
+ * 再套一层白底就成了白套白，用这个类把容器还原成透明壳。
+ */
+.page--plain {
+  padding: 0;
+  background-color: transparent;
+  border: none;
+}
+
+/* 详情页/表单页抽屉底部按钮 */
+.base-drawer-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* nprogress 顶部进度条配色跟随主题 */
+#nprogress .bar {
+  background: var(--el-color-primary);
+}
+
+/*
+ * 遮罩范围，取值见 stores/app 的 maskScope 与 styles/mask.ts。
+ *
+ * tab（默认）：把弹窗根节点那块 fixed 矩形拉到内容区的位置大小上，
+ * 对话框仍居中于这一块，视觉上就属于当前页签；page 模式不加这些规则，
+ * 保持 Element Plus 默认的全屏覆盖。
+ *
+ * height/width 必须显式复位成 auto：.el-overlay 自带 height:100%，
+ * fixed 元素的 100% 是按整个视口算的，只改 top/bottom 的话高度还是撑满。
+ */
+html[data-mask-scope='tab'] {
+  .el-overlay,
+  .el-overlay-dialog {
+    top: var(--base-mask-top, 0);
+    right: var(--base-mask-right, 0);
+    bottom: var(--base-mask-bottom, 0);
+    left: var(--base-mask-left, 0);
+    width: auto;
+    height: auto;
+  }
+}
+
+/*
+ * page 模式：内容区那个 loading 从"内容区级"抬成"视口级"。
+ * el-loading-mask 本来就写着 top/right/bottom/left: 0，换成 fixed 就直接满屏，
+ * 不需要再算偏移量。tab 模式不生效——保持 absolute，天然盖住当前页签那一块。
+ */
+html[data-mask-scope='page'] .base-layout__content > .el-loading-mask {
+  position: fixed;
+}
+
+/*
+ * 页签右键菜单。
+ * teleport 到 body 下，所以不能用 scoped 样式，只能放全局。
+ */
+.tabs-contextmenu {
+  position: fixed;
+  z-index: 3000;
+  min-width: 100px;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  font-size: 12px;
+  background: var(--el-bg-color-overlay);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 4px;
+  box-shadow: var(--el-box-shadow-light);
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    color: var(--el-text-color-regular);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
+    }
+
+    &.is-disabled {
+      color: var(--el-text-color-placeholder);
+      cursor: not-allowed;
+
+      &:hover {
+        background: transparent;
+        color: var(--el-text-color-placeholder);
+      }
+    }
+  }
+}

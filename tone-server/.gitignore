@@ -1,0 +1,12 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# 本地上传目录（base.file.local-path 默认 ./upload）
+upload/
+
+# 离线 IP 库体积较大，按需自行放置，不入库
+src/main/resources/ip2region.xdb
+
+*.bak

@@ -1,0 +1,12 @@
+version: "3"
+services:
+  tone-server:
+    # 这里取决与打包后的镜像
+    image: tone-server:1.0.0
+    ports:
+      - "10002:10002"
+    volumes:
+      - /opt/tone-server/logs:/app/logs
+      - /opt/tone-server/upload:/app/upload
+      - /opt/tone-server/upload-origin:/app/upload-origin
+    restart: always

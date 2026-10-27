@@ -1,0 +1,57 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 生产环境全部走环境变量，不在配置文件里留明文
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME:tone_agent}?useUnicode=true&characterEncoding=utf8&useSSL=true&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      pool-name: ToneHikariPool
+      minimum-idle: 10
+      maximum-pool-size: 50
+      connection-timeout: 30000
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      database: ${REDIS_DB:0}
+      lettuce:
+        pool:
+          enabled: true
+          max-active: 32
+          max-idle: 16
+          min-idle: 4
+
+mybatis-plus:
+  configuration:
+    # 生产禁止打印 SQL（含参数，可能泄漏敏感数据）
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+# 生产关闭接口文档，避免 /doc.html 与 /v3/api-docs 暴露接口定义
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+tone:
+  security:
+    captcha-enabled: true
+  llm:
+    mock: false
+    base-url: ${TONE_LLM_BASE_URL:}
+    api-key: ${TONE_LLM_API_KEY:}
+    provider: ${TONE_LLM_PROVIDER:}
+    model: ${TONE_LLM_MODEL:}
+  wx:
+    # 开发期默认模拟登录：忽略 appid/secret，按设备号生成稳定 mock openId（配了真实 appid 也不受影响）。
+    # 要在开发者工具里测真实 code2session 时改成 false，并确保 appid/secret 已配置
+    mock-login: false
+
+logging:
+  level:
+    root: warn
+    com.lizp.tone: info
+  file:
+    name: ./logs/tone-server.log

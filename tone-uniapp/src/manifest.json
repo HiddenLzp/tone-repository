@@ -1,0 +1,23 @@
+{
+  "name": "措辞师",
+  "appid": "",
+  "description": "消息语气检查与改写 Agent",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "mp-weixin": {
+    "appid": "wx8ab08a1e1b424e4b",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "minified": true
+    },
+    "usingComponents": true
+  },
+  "h5": {
+    "devServer": {
+      "port": 5174
+    }
+  },
+  "vueVersion": "3"
+}

@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.0</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.lizp</groupId>
+    <artifactId>tone-server</artifactId>
+    <version>1.0.0</version>
+    <name>tone-server</name>
+    <description>消息语气检查与改写 Agent - 后端</description>
+
+    <properties>
+        <java.version>17</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <mybatis-plus.version>3.5.17</mybatis-plus.version>
+        <jjwt.version>0.12.6</jjwt.version>
+        <springdoc.version>3.2.0</springdoc.version>
+        <spring-ai.version>2.0.0</spring-ai.version>
+        <hutool.version>5.8.47</hutool.version>
+        <ip2region.version>2.7.0</ip2region.version>
+        <ttl.version>2.14.5</ttl.version>
+        <thumbnailator.version>0.4.20</thumbnailator.version>
+        <minio.version>8.5.12</minio.version>
+        <aliyun.oss.version>3.17.4</aliyun.oss.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Spring AI 2.0：面向 Boot 4.x / Framework 7 的 GA 版本线 -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- ============ Web ============ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <!-- Boot 4 起 spring-boot-starter-aop 被移除，AOP 自动装配在核心里；
+             @Aspect 注解处理只差 aspectjweaver，显式引入 -->
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+        </dependency>
+
+        <!-- ============ 安全 ============ -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <!-- jjwt 三件套：api(接口) / impl(运行时实现) / jackson(JSON 序列化)，缺一不可 -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- ============ 数据层 ============ -->
+        <!-- Boot 4 需用 boot4 starter（3.5.15 及更早的 mybatis-spring 在 Boot 4 下自动配置失效） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
+        <!-- MP 3.5.9 起把依赖 JSqlParser 的拦截器拆到了独立包：
+             PaginationInnerInterceptor、DataPermissionInterceptor、TenantLineInnerInterceptor 都在这里面，
+             不加这个依赖会报 ClassNotFoundException -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- Boot 4 把缓存自动配置拆到了独立模块：@EnableCaching 生效需要它，
+             否则无 CacheManager 启动失败（无第三方缓存实现时默认 ConcurrentMapCacheManager） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <!-- Lettuce 连接池：spring-boot 从 2.x 起不再默认带它，
+             不显式引入的话，一旦在 yml 里配了 lettuce.pool 就会报 NoClassDefFoundError -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
+        </dependency>
+
+        <!-- ============ 工具 ============ -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>${hutool.version}</version>
+        </dependency>
+        <!-- IP 归属地离线库，缺失 xdb 文件时自动降级为"未知"，不影响启动 -->
+        <dependency>
+            <groupId>org.lionsoul</groupId>
+            <artifactId>ip2region</artifactId>
+            <version>${ip2region.version}</version>
+        </dependency>
+        <!-- 线程池上下文传递：解决 @Async / 定时任务里拿不到当前用户、以及线程复用串号的问题 -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>transmittable-thread-local</artifactId>
+            <version>${ttl.version}</version>
+        </dependency>
+
+        <!-- ============ 文件存储 ============ -->
+        <!-- 图片压缩：基于 JDK ImageIO 的高层封装，单 jar 无传递依赖（GIF/EXIF 都已处理） -->
+        <dependency>
+            <groupId>net.coobird</groupId>
+            <artifactId>thumbnailator</artifactId>
+            <version>${thumbnailator.version}</version>
+        </dependency>
+        <!-- MinIO / 阿里云 OSS SDK：optional=true 表示本工程可用、但不传递给引用方。
+             两者都按 storage-type 条件装配，配了才生效，所以默认用本地存储时它们只是"躺"在包里：
+             代价是 jar 体积多约 6MB（其中 okhttp 带进来的 kotlin-stdlib 就有 1.7MB）。
+             介意的话直接删掉下面两个 dependency —— 但因为 pom.xml 里移除依赖后
+             MinioStorageStrategy / OssStorageStrategy 编译不过，需要连这两个类一起删，
+             对应的 XXStorageConfiguration 也要删（它们用了 @ConditionalOnClass，留着反而安全），
+             其余代码不受影响，改完 storage-type 只支持 local。 -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>${minio.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>${aliyun.oss.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- ============ 接口文档 ============ -->
+        <!-- springdoc v3 线适配 Spring Boot 4.x -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
+        </dependency>
+
+        <!-- ============ AI / LLM ============ -->
+        <!-- OpenAI 兼容协议：智谱 / 通义(DashScope compatible-mode) 均可通过 base-url 切换 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-openai</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>tone-server</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
